@@ -27,3 +27,4 @@ together: meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo 用于翻译
 - pydub
 - audioop-lts
 
+执行: `pip install openai together pydantic moviepy pysrt pydub audioop-lts`
