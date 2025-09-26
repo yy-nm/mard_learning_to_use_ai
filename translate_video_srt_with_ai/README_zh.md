@@ -28,3 +28,5 @@ together: meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo 用于翻译
 - audioop-lts
 
 执行: `pip install openai together pydantic moviepy pysrt pydub audioop-lts`
+
+还需要安装 ffmpeg 并将其加入执行 PATH 之中

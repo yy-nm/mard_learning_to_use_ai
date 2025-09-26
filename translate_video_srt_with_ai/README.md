@@ -49,3 +49,4 @@ Dependencies list:
 - pydub
 - audioop-lts
 
+at last install ffmpeg and add to PATH

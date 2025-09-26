@@ -16,6 +16,10 @@ from pydub.silence import detect_silence
 
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 
+if __name__ == "__main__":
+	sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+	pass
+
 from conf import kAPI_KEY_OPENROUTER as API_KEY # 后续再改成自己的 API_KEY
 from conf import kAPI_KEY_TOGETHER
 from conf import kSYSTEM_TRANSCRIBE_PROMPT, kUSER_TRANSCRIBE_PROMPT, kSYSTEM_TRANSLATE_PROMPT, kUSER_TRANSLATE_PROMPT
