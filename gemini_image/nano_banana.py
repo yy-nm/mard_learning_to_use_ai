@@ -61,7 +61,9 @@ def _do_image_edit(input_path: str, output_path: str, promote: str = kImagePromo
 		promote=promote,
 		model_name=model_name,
 		image_path=input_path,
+		# image_size="4k",
 	)
+	
 
 	# print(response)
 
@@ -90,7 +92,7 @@ def _do_image_edit(input_path: str, output_path: str, promote: str = kImagePromo
 	pass
 
 
-def do_nano_banana_image_with_http(image_path: str):
+def do_nano_banana_image_with_http(image_path: str, promote: str = kImagePromote, model_name: str = "google/gemini-2.5-flash-image-preview"):
 	file = image_path
 	if os.path.isabs(file) is False:
 		file = os.path.abspath(file)
@@ -105,11 +107,13 @@ def do_nano_banana_image_with_http(image_path: str):
 		return
 		pass
 
-	promote = kImagePromote
+	# promote = kImagePromote
 	response = imagehelper.chat_image_with_nano_banana_via_openrouter_with_url(
 		api_key=kAPI_KEY_OPENROUTER,
+		model_name=model_name,
 		promote=promote,
-		image_path=file
+		image_path=file,
+		image_size="4k",
 	)
 
 	if response is None or not response.ok:
@@ -211,8 +215,10 @@ def test_case():
 		if file_name.endswith(('.png', '.jpg', '.jpeg')) and not entry.endswith(kResultFileSuffix):
 			file_path = os.path.join(folder, entry)
 			# do_image_edit(file_path)
-			do_image_edit(file_path, file_suffix=kResultFileSuffixForOpenAI, promote=kImagePromoteForOpenAI, model_name=kModelNameForOpenAI)
+			# do_image_edit(file_path, model_name="google/gemini-3-pro-image-preview")
+			# do_image_edit(file_path, file_suffix=kResultFileSuffixForOpenAI, promote=kImagePromoteForOpenAI, model_name=kModelNameForOpenAI)
 			# do_nano_banana_image_with_http(file_path)
+			do_nano_banana_image_with_http(file_path, model_name="google/gemini-3-pro-image-preview")
 			pass
 		pass
 	# do_image_edit(file)
@@ -233,8 +239,8 @@ def main():
 
 	args = parser.parse_args()
 
-	# test_case()
-	do_action(args.input, args.output)
+	test_case()
+	# do_action(args.input, args.output)
 	pass
 
 

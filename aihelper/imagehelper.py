@@ -17,14 +17,15 @@ def chat_image_with_nano_banana_via_openrouter(api_key: str, promote: str = None
 						url: str = "https://openrouter.ai/api/v1",
 						image_path: str = None,
 						image_url: str = None,
+						image_size: str = None,
 						):
 	client = OpenAI(
 		base_url=url,
 		api_key=api_key,
 	)
 
-	if image_path is None and image_url is None:
-		raise ValueError("Either image_path or image_url must be provided.")
+	# if image_path is None and image_url is None:
+	# 	raise ValueError("Either image_path or image_url must be provided.")
 
 	prompt = promote if promote is not None else "Generate an image based on the provided content."
 
@@ -35,13 +36,25 @@ def chat_image_with_nano_banana_via_openrouter(api_key: str, promote: str = None
 		}
 	]
 
+	extra_body = None
+	if image_size is not None:
+		extra_body = {
+			"modalities": ["image", "text"],
+			"image_config" : {
+				"aspect_ratio": "16:9",
+				"image_size": image_size
+			}
+		}
+		
+		pass
+
 	if image_path is not None:
 		image_data = encode_image_to_base64(image_path)
 		content.append(
 			{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_data}"}}
 		)
 		pass
-	else:
+	elif image_url is not None:
 		content.append(
 			{"type": "image_url", "image_url": {"url": image_url}}
 		)
@@ -50,6 +63,7 @@ def chat_image_with_nano_banana_via_openrouter(api_key: str, promote: str = None
 	completion = client.chat.completions.create(
 		model=model_name,
 		messages=[{"role": "user", "content": content}],
+		extra_body=extra_body,
 	)
 
 	return completion
@@ -59,6 +73,7 @@ def chat_image_with_nano_banana_via_openrouter_with_url(api_key: str, promote: s
 						url: str = "https://openrouter.ai/api/v1/chat/completions",
 						image_path: str = None,
 						image_url: str = None,
+						image_size: str = None,
 						):
 	
 	headers = {
@@ -66,8 +81,8 @@ def chat_image_with_nano_banana_via_openrouter_with_url(api_key: str, promote: s
 		"Content-Type": "application/json"
 	}
 
-	if image_path is None and image_url is None:
-		raise ValueError("Either image_path or image_url must be provided.")
+	# if image_path is None and image_url is None:
+	# 	raise ValueError("Either image_path or image_url must be provided.")
 
 	content = [
 		{"type": "text", "text": promote},
@@ -78,7 +93,7 @@ def chat_image_with_nano_banana_via_openrouter_with_url(api_key: str, promote: s
 			{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_data}"}}
 		)
 		pass
-	else:
+	elif image_url is not None:
 		content.append(
 			{"type": "image_url", "image_url": {"url": image_url}}
 		)
@@ -95,6 +110,11 @@ def chat_image_with_nano_banana_via_openrouter_with_url(api_key: str, promote: s
 		"model": model_name,
 		"messages": messages,
 	}
+
+	if image_size is not None:
+		payload["image_config"] = {'aspect_ratio': "16:9", "image_size": image_size}
+		payload['modalities'] = ['text', 'image']
+		pass
 
 	response = requests.post(url, headers=headers, json=payload)
 	return response
