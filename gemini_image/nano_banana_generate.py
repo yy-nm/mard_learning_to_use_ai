@@ -15,17 +15,18 @@ kAPI_KEY_OPENROUTER = os.getenv("API_KEY_OPENROUTER", "")
 
 kImageGeneratePromote = '''
 创建一张图， 图片为卡通风格， 图上有如下内容
-一只米老鼠站在船头， 指挥船的方向
+一只小狐狸背书书包上学
 '''
+kImageSizeDefault = "1K" # 1K, 2K, 4K
+kModelDefaultName = 'google/gemini-3-pro-image-preview' # nano banan pro
 
-
-def _do_image_edit(promote: str, output_path: str,  model_name: str = "google/gemini-3-pro-image-preview"):
+def _do_image_edit(promote: str, output_path: str,  model_name: str = kModelDefaultName):
 
 	response = imagehelper.chat_image_with_nano_banana_via_openrouter(
 		api_key=kAPI_KEY_OPENROUTER,
 		promote=promote,
 		model_name=model_name,
-		image_size="4k",
+		image_size=kImageSizeDefault,
 	)
 	
 	print(response)
@@ -51,17 +52,49 @@ def _do_image_edit(promote: str, output_path: str,  model_name: str = "google/ge
 	pass
 
 
-def do_nano_banana_image_with_http(promote: str, output_path: str, model_name: str = "google/gemini-2.5-flash-image-preview"):
+def do_nano_banana_image_with_http(promote: str, output_path: str, model_name: str = kModelDefaultName):
+	is_stream = kImageSizeDefault == '4K'
 	response = imagehelper.chat_image_with_nano_banana_via_openrouter_with_url(
 		api_key=kAPI_KEY_OPENROUTER,
 		model_name=model_name,
 		promote=promote,
-		image_size="4k",
+		image_size=kImageSizeDefault,
+		stream=is_stream, # 4k use stream
 	)
 
 	if response is None or not response.ok:
 		print(f"request failed: {response}")
 		return
+
+	if is_stream:
+		for line in response.iter_lines():
+			if line:
+				line = line.decode('utf-8')
+				if line.startswith('data: '):
+					data = line[6:]
+					if data != '[DONE]':
+						try:
+							chunk = json.loads(data)
+							if chunk.get("choices"):
+								delta = chunk["choices"][0].get("delta", {})
+								if delta.get("reasoning"):
+									print(f"Reasoning: {delta['reasoning']}")
+								if delta.get("images"):
+									index = 0
+									for image in delta["images"]:
+										image_info = image['image_url']['url'].encode('utf-8')
+										print(f"Generated image: {image_info[:50]}...")
+										suffix = get_file_suffix(image_info)
+										path = f"{output_path}.{index}.{suffix}"
+										decode_base64_image(image_info, path)
+										index += 1
+										pass
+						except json.JSONDecodeError:
+							continue
+			pass
+		print('stream deal done')
+		return
+		pass
 
 	# print(response)
 	raw_content = response.content.strip()
@@ -130,10 +163,18 @@ def decode_base64_image(data: bytes, output_path: str):
 	print(f"Image saved to: {output_path}, header: {header}")
 	pass
 
+def get_file_suffix(data: bytes) -> str:
+	data = data.strip()
+	header, encoded = data.split(b";", 1)
+	stuff, suffix = header.split(b"/", 1)
+
+	return suffix.decode("utf-8")
+
 
 
 def do_action(promote: str, output_path: str):
-	_do_image_edit(promote, output_path)
+	# _do_image_edit(promote, output_path)
+	do_nano_banana_image_with_http(promote, output_path)
 	pass
 
 

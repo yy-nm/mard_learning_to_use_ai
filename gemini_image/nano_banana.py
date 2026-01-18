@@ -24,7 +24,7 @@ kImagePromote = '''
 最后请将图内容直接下发。
 '''
 kResultFileSuffix = ".nano_banana_result.json.png"
-
+kResultMultiFileSuffix = ".nano_banana_result.multi.json.png"
 
 # kImagePromoteForOpenAI = '''
 # 请将这张人物照片转换为日本动画角色风格，柔和色调，使用手绘的人物设计风格， 怀旧童话。保持原始照片中的面部表情和姿势，但用日本动画标志性的人物比例和面部特征重新绘制。
@@ -94,9 +94,8 @@ def _do_image_edit(input_path: str, output_path: str, promote: str = kImagePromo
 
 def do_nano_banana_image_with_http(image_path: str, promote: str = kImagePromote, model_name: str = "google/gemini-2.5-flash-image-preview"):
 	file = image_path
-	if os.path.isabs(file) is False:
+	if not os.path.isabs(file):
 		file = os.path.abspath(file)
-		# file = os.path.join(os.path.dirname(__file__), file)
 		pass
 	print(f"file: {file}")
 
@@ -128,6 +127,74 @@ def do_nano_banana_image_with_http(image_path: str, promote: str = kImagePromote
 	# 	f.write(raw_content)
 	# 	pass
 	
+	# print(f"result saved to: {result_file_path}")
+
+	data = json.loads(raw_content.decode('utf-8'))
+	if 'choices' in data and len(data['choices']) > 0:
+		result_message = data['choices'][0]['message']
+		if 'images' in result_message and len(result_message['images']) > 0:
+			image = result_message['images'][0]
+			if image['type'] == 'image_url':
+				image_url = image['image_url']['url']
+				# print(f"image_url: {image_url}")
+				decode_base64_image(image_url.encode('utf-8'), result_image_path)
+				pass
+			else:
+				print("no images in response 1")
+				pass
+			pass
+		else:
+			print("no images in response 2")
+			pass
+		pass
+	else:
+		print("response empty")
+		pass
+	pass
+
+
+def do_nano_banana_image_list_with_http(image_path: list[str], promote: str = kImagePromote,  model_name: str = "google/gemini-2.5-flash-image-preview"):
+	file_list = []
+	file = None
+	for entry in image_path:
+		if not os.path.isabs(entry):
+			entry = os.path.abspath(entry)
+			pass
+		if file is None:
+			file = entry
+			pass
+		file_list.append(entry)
+		pass
+	print(f"file: {file_list}")
+
+	result_image_path = file + kResultMultiFileSuffix
+
+	if os.path.exists(result_image_path):
+		print(f"result_image_path exists, skip: {result_image_path}")
+		return
+		pass
+
+	# promote = kImagePromote
+	response = imagehelper.chat_image_with_nano_banana_via_openrouter_with_url(
+		api_key=kAPI_KEY_OPENROUTER,
+		model_name=model_name,
+		promote=promote,
+		image_path_list=file_list,
+		# image_size="4k",
+	)
+
+	if response is None or not response.ok:
+		print(f"request failed: {response}")
+		return
+
+	# print(response)
+	raw_content = response.content.strip()
+
+	# result_file_path = file + ".nano_banana_result.json"
+	# with open(result_file_path, "wb") as f:
+	# 	f.write(raw_content)
+	# 	pass
+
 	# print(f"result saved to: {result_file_path}")
 
 	data = json.loads(raw_content.decode('utf-8'))
@@ -227,6 +294,32 @@ def test_case():
 	pass
 
 
+def test_case_2():
+	folder = kTargetImageFolder
+	if not os.path.isabs(folder):
+		folder = os.path.join(os.path.dirname(__file__), folder)
+		pass
+	print(f"folder: {folder}")
+	file_list = []
+	for entry in os.listdir(folder):
+		file_name = entry.lower()
+		if file_name.endswith(('.png', '.jpg', '.jpeg')) and not entry.endswith(kResultFileSuffix):
+			file_path = os.path.join(folder, entry)
+			file_list.append(file_path)
+			pass
+		pass
+
+	# max image size； 目前来说有大小限制， 可能卡在中间服务器的处理上限上（比如服务器限制请求长度比如 1M）
+	if len(file_list) > 2:
+		file_list = file_list[:2]
+		pass
+
+	promote = '''
+	请将这几张图里的人物放在同一场景里展示
+	'''
+	do_nano_banana_image_list_with_http(file_list, promote, model_name="google/gemini-3-pro-image-preview")
+	pass
+
 def do_action(input_path: str, output_path: str):
 	_do_image_edit(input_path, output_path)
 	pass
@@ -239,7 +332,8 @@ def main():
 
 	args = parser.parse_args()
 
-	test_case()
+	# test_case()
+	test_case_2()
 	# do_action(args.input, args.output)
 	pass
 

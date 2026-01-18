@@ -41,11 +41,10 @@ def chat_image_with_nano_banana_via_openrouter(api_key: str, promote: str = None
 		extra_body = {
 			"modalities": ["image", "text"],
 			"image_config" : {
-				"aspect_ratio": "16:9",
+				# "aspect_ratio": "16:9",
 				"image_size": image_size
 			}
 		}
-		
 		pass
 
 	if image_path is not None:
@@ -73,7 +72,9 @@ def chat_image_with_nano_banana_via_openrouter_with_url(api_key: str, promote: s
 						url: str = "https://openrouter.ai/api/v1/chat/completions",
 						image_path: str = None,
 						image_url: str = None,
+						image_path_list: Iterable[str] = None,
 						image_size: str = None,
+						stream: bool = False,
 						):
 	
 	headers = {
@@ -98,6 +99,14 @@ def chat_image_with_nano_banana_via_openrouter_with_url(api_key: str, promote: s
 			{"type": "image_url", "image_url": {"url": image_url}}
 		)
 		pass
+	elif image_path_list is not None:
+		for path in image_path_list:
+			image_data = encode_image_to_base64(path)
+			content.append(
+				{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_data}"}}
+			)
+			pass
+		pass
 
 	messages = [
 		{
@@ -112,8 +121,15 @@ def chat_image_with_nano_banana_via_openrouter_with_url(api_key: str, promote: s
 	}
 
 	if image_size is not None:
-		payload["image_config"] = {'aspect_ratio': "16:9", "image_size": image_size}
-		payload['modalities'] = ['text', 'image']
+		payload["image_config"] = {
+			# 'aspect_ratio': "16:9",
+			"image_size": image_size
+		}
+		payload['modalities'] = ['image','text']
+		# payload['provider'] = {"sort": "throughput"}
+		pass
+	if stream:
+		payload['stream'] = True
 		pass
 
 	response = requests.post(url, headers=headers, json=payload)
