@@ -72,7 +72,8 @@ if kHAS_INSTRUCTOR:
 # gemini-2.5-flash-lite
 def transcribe_audio_with_openrouter(api_key: str, audio_path: str, promote: str, 
 									# model_name = "google/gemini-2.5-flash",
-									model_name = "google/gemini-2.5-pro",
+									# model_name = "google/gemini-2.5-pro",
+									model_name = "google/gemini-3-flash-preview",
 									url = "https://openrouter.ai/api/v1/chat/completions",
 									system_message: str = None
 									):

@@ -22,6 +22,7 @@ if __name__ == "__main__":
 
 from conf import kAPI_KEY_OPENROUTER as API_KEY # 后续再改成自己的 API_KEY
 from conf import kAPI_KEY_TOGETHER
+from conf import kAPI_KEY_OPENROUTER
 from conf import kSYSTEM_TRANSCRIBE_PROMPT, kUSER_TRANSCRIBE_PROMPT, kSYSTEM_TRANSLATE_PROMPT, kUSER_TRANSLATE_PROMPT
 
 from aihelper import audiohelper
@@ -361,12 +362,20 @@ def convert_jp_to_ch_srt_together_thread(subtitles, output_file):
 	]
 	promote_prefix = kUSER_TRANSLATE_PROMPT
 
-	result_list = chathelper.chat_list_with_together_on_thread(
-		api_key=kAPI_KEY_TOGETHER,
+	# result_list = chathelper.chat_list_with_ai_on_thread(
+	# 	api_key=kAPI_KEY_TOGETHER,
+	# 	promote_list=words,
+	# 	promote_prefix=promote_prefix,
+	# 	common_other_message=messages,
+	# 	model_name="meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+	# )
+	result_list = chathelper.chat_list_with_ai_on_thread(
+		api_key=kAPI_KEY_OPENROUTER,
 		promote_list=words,
-		prmote_prefix=promote_prefix,
+		promote_prefix=promote_prefix,
 		common_other_message=messages,
-		model_name="meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
+		model_name="google/gemini-3-flash-preview",
+		use_ai_platform='openrouter',
 	)
 
 	# result_list.sort(key=lambda x: x[0])

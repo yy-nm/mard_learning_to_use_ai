@@ -12,7 +12,7 @@ from together import AsyncTogether, Together
 def chat_with_openrouter(api_key: str, promote: str = None,
 						model_name: str = "openai/gpt-4o-mini",
 						url: str = "https://openrouter.ai/api/v1",
-						message: List[str] = None,
+						message: List[dict] = None,
 						):
 	client = OpenAI(
 		base_url=url,
@@ -197,14 +197,31 @@ def _chat_with_together_on_thread(index: int, api_key: str, message: str, promot
 		return promote_raw, content
 	return None
 
-def chat_list_with_together_on_thread(api_key: str, promote_list: Iterable[str], prmote_prefix: str = None,
-												common_other_message: List[str] = None,
+
+def _chat_with_openrouter_on_thread(index: int, api_key: str, message: str, promote_raw: str, limit: int, model_name: str):
+	if limit > 0:
+		time.sleep(1)
+		pass
+
+	completion = chat_with_openrouter(api_key=api_key, model_name=model_name, message=message)
+	# print(f"Chat with Together on thread, model: {model_name}, message: {message} completion: {completion}")
+	print(f"Chat with Together on thread index: {index}, completion: {completion}")
+	if completion.choices:
+		content = completion.choices[0].message.content.strip()
+		return promote_raw, content
+	return None
+
+
+def chat_list_with_ai_on_thread(api_key: str, promote_list: Iterable[str], promote_prefix: str = None,
+												common_other_message: List[dict] = None,
 												limit: int = 10, # qps limit
-												model_name: str = "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
+												model_name: str = "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+												# model_name: str = "google/gemini-3-flash-preview",
+												use_ai_platform: str = 'together'
 												) -> List[Tuple[str, str]]:
 
-	if prmote_prefix is None:
-		prmote_prefix = ''
+	if promote_prefix is None:
+		promote_prefix = ''
 		pass
 	if common_other_message is None:
 		common_other_message = []
@@ -219,7 +236,7 @@ def chat_list_with_together_on_thread(api_key: str, promote_list: Iterable[str],
 			pass
 		message.append(
 			{
-				"role": "user", "content": prmote_prefix + promote
+				"role": "user", "content": promote_prefix + promote
 			}
 		)
 
@@ -238,6 +255,11 @@ def chat_list_with_together_on_thread(api_key: str, promote_list: Iterable[str],
 		process_count = max(os.cpu_count(), limit)
 
 	with Pool(processes=process_count) as p:
-		result = p.starmap(_chat_with_together_on_thread, args_list)
+		result = []
+		if use_ai_platform == 'together':
+			result = p.starmap(_chat_with_together_on_thread, args_list)
+		elif use_ai_platform == 'openrouter':
+			result = p.starmap(_chat_with_openrouter_on_thread, args_list)
+			pass
 		return result
-	return
+	pass
