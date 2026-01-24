@@ -205,7 +205,7 @@ def _chat_with_openrouter_on_thread(index: int, api_key: str, message: str, prom
 
 	completion = chat_with_openrouter(api_key=api_key, model_name=model_name, message=message)
 	# print(f"Chat with Together on thread, model: {model_name}, message: {message} completion: {completion}")
-	print(f"Chat with Together on thread index: {index}, completion: {completion}")
+	print(f"Chat with openrouter on thread index: {index}, completion: {completion}")
 	if completion.choices:
 		content = completion.choices[0].message.content.strip()
 		return promote_raw, content

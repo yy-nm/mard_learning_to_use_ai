@@ -25,7 +25,7 @@ kImageGeneratePromote = '''
 '''
 
 kImageSizeDefault = "1K" # 1K, 2K, 4K # 4K 会生成两张内容， 一张 1K 第二张 4K
-kModelDefaultName = 'google/gemini-3-pro-image-preview' # nano banan pro
+kModelDefaultName = 'google/gemini-3-pro-image-preview:floor' # nano banan pro, use :floor to prioritize lowest price
 
 def _do_image_edit(promote: str, output_path: str,  model_name: str = kModelDefaultName):
 

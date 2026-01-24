@@ -42,6 +42,7 @@ def chat_image_with_nano_banana_via_openrouter(api_key: str, promote: str = None
 				# "aspect_ratio": "16:9",
 				"image_size": image_size
 			}
+			# "provider": {'sort': 'price',} # prioritize lowest price
 		}
 		pass
 
@@ -133,6 +134,7 @@ def chat_image_with_nano_banana_via_openrouter_with_url(api_key: str, promote: s
 	payload: Dict[str, Any] = {
 		"model": model_name,
 		"messages": messages,
+		# "provider": {'sort': 'price',} # prioritize lowest price
 	}
 
 	if image_size is not None:

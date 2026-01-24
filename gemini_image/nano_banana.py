@@ -190,7 +190,7 @@ def test_case():
 			# do_image_edit(file_path, model_name="google/gemini-3-pro-image-preview")
 			# do_image_edit(file_path, file_suffix=kResultFileSuffixForOpenAI, promote=kImagePromoteForOpenAI, model_name=kModelNameForOpenAI)
 			# do_nano_banana_image_with_http(file_path)
-			do_nano_banana_image_with_http(file_path, model_name="google/gemini-3-pro-image-preview")
+			do_nano_banana_image_with_http(file_path, model_name="google/gemini-3-pro-image-preview:floor")
 			pass
 		pass
 	# do_image_edit(file)
@@ -223,7 +223,7 @@ def test_case_2():
 	promote = '''
 	请将这几张图里的人物放在同一场景里展示
 	'''
-	do_nano_banana_image_list_with_http(file_list, promote, model_name="google/gemini-3-pro-image-preview")
+	do_nano_banana_image_list_with_http(file_list, promote, model_name="google/gemini-3-pro-image-preview:floor")
 	pass
 
 def do_action(input_path: str, output_path: str):
@@ -238,9 +238,9 @@ def main():
 
 	args = parser.parse_args()
 
-	# test_case()
+	test_case()
 	# test_case_2()
-	do_action(args.input, args.output)
+	# do_action(args.input, args.output)
 	pass
 
 

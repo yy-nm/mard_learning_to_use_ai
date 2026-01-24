@@ -26,4 +26,7 @@ def check_file_match_generated_file(file_name: str, suffix_name: str) -> bool:
 	file_name, file_extension = os.path.splitext(file_name)
 	if file_name.endswith(suffix_name):
 		return True
+	file_name, index = os.path.splitext(file_name)
+	if index[1:].isdigit() and file_name.endswith(suffix_name):
+		return True
 	return False
