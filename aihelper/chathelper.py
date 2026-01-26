@@ -4,6 +4,7 @@ from multiprocessing import Pool
 import time
 import os
 
+import openai
 from openai import AsyncOpenAI, OpenAI
 
 from together import AsyncTogether, Together
@@ -13,27 +14,46 @@ def chat_with_openrouter(api_key: str, promote: str = None,
 						model_name: str = "openai/gpt-4o-mini",
 						url: str = "https://openrouter.ai/api/v1",
 						message: List[dict] = None,
+						retry_count: int = 3,
 						):
-	client = OpenAI(
-		base_url=url,
-		api_key=api_key,
-	)
 
-	if message is None:
-		message = [
-			{
-				"role": "user",
-				"content": promote
-			}
-		]
-		pass
+	for _ in range(retry_count):
+		try:
+			client = OpenAI(
+				base_url=url,
+				api_key=api_key,
+			)
 
-	completion = client.chat.completions.create(
-		model = model_name,
-		messages = message,
-	)
-	
-	return completion
+			if message is None:
+				message = [
+					{
+						"role": "user",
+						"content": promote
+					}
+				]
+				pass
+
+			completion = client.chat.completions.create(
+				model=model_name,
+				messages=message,
+			)
+			if completion and hasattr(completion, "error"):
+				continue
+			return completion
+		except openai.RateLimitError as e:
+			time.sleep(1)
+		except openai.APIConnectionError as e:
+			time.sleep(1)
+		except openai.APIStatusError as e:
+			# 5xx
+			if 500 <= e.status_code < 600:
+				time.sleep(1)
+			else:
+				print("API 状态错误: %s", e)
+				raise
+		except Exception as e:
+			pass
+	return None
 
 
 async def chat_with_openrouter_on_coroutine(api_key: str, promote: str = None,
@@ -203,12 +223,13 @@ def _chat_with_openrouter_on_thread(index: int, api_key: str, message: str, prom
 		time.sleep(1)
 		pass
 
-	completion = chat_with_openrouter(api_key=api_key, model_name=model_name, message=message)
-	# print(f"Chat with Together on thread, model: {model_name}, message: {message} completion: {completion}")
-	print(f"Chat with openrouter on thread index: {index}, completion: {completion}")
-	if completion.choices:
-		content = completion.choices[0].message.content.strip()
-		return promote_raw, content
+		completion = chat_with_openrouter(api_key=api_key, model_name=model_name, message=message)
+		# print(f"Chat with Together on thread, model: {model_name}, message: {message} completion: {completion}")
+		print(f"Chat with openrouter on thread index: {index}, completion: {completion}")
+		if completion and completion.choices:
+			content = completion.choices[0].message.content.strip()
+			return promote_raw, content
+		pass
 	return None
 
 

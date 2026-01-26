@@ -40,12 +40,23 @@ except ImportError:
 
 kVENV_PATH = ''
 
+# old mp3 param
+# kAUDIO_PARAM_CODEC = 'libmp3lame'
+# kAUDIO_PARAM_BITRATE = '64K' # at least 32K for human listen
+# kAUDIO_PARAM_FPS = 22050
+# kAUDIO_PARAM_FFMPEG_PARAM = ["-ac", "1"]
+# kAUDIO_PARAM_FORMAT = "mp3"
 # audio param only for ASR/NLP
 kAUDIO_PARAM_CODEC = 'libopus'
 kAUDIO_PARAM_BITRATE = '16K' # at least 32K for human listen
 kAUDIO_PARAM_FPS = 16000
 kAUDIO_PARAM_FFMPEG_PARAM = ["-ac", "1"]
 kAUDIO_PARAM_FORMAT = "ogg"
+
+kRESPONSE_FORMAT_JSON_BEGIN = '```json'
+kRESPONSE_FORMAT_JSON_END = '```'
+
+kTRY_TRANSCRIBE_AUDIO_WITH_AI_COUNT = 3
 
 
 def _extract_audio(video_path, output_path=None, audio_format=kAUDIO_PARAM_FORMAT, skip_seconds=0):
@@ -109,7 +120,7 @@ def _extract_audio(video_path, output_path=None, audio_format=kAUDIO_PARAM_FORMA
 	return output_path
 
 
-def check_audio_already_split(audio_path, output_dir, skip_seconds=0) -> List[str]:
+def check_audio_already_split(audio_path, output_dir) -> List[str]:
 	"""
 	Check if the audio file has already been split into segments
 
@@ -122,7 +133,7 @@ def check_audio_already_split(audio_path, output_dir, skip_seconds=0) -> List[st
 	"""
 	audio_name = Path(audio_path).stem
 	# Check for the existence of segment files
-	segment_files = list(Path(output_dir).glob(f"{audio_name}_part_*.{kAUDIO_PARAM_FORMAT}"))
+	segment_files = list(Path(output_dir).glob(f"{audio_name}_part_???.{kAUDIO_PARAM_FORMAT}"))
 	total_duration = 0
 	all_piece_path = []
 	for file in segment_files:
@@ -133,7 +144,7 @@ def check_audio_already_split(audio_path, output_dir, skip_seconds=0) -> List[st
 		pass
 
 	whole_audio = AudioFileClip(audio_path)
-	if math.fabs(whole_audio.duration - total_duration - skip_seconds) / whole_audio.duration < 0.01:
+	if math.fabs(whole_audio.duration - total_duration) / whole_audio.duration < 0.01:
 		return all_piece_path
 	# remove old file
 	for path in all_piece_path:
@@ -165,7 +176,7 @@ def _split_audio_at_silence(audio_segment, min_silence_len=1000, silence_thresh=
 	return [(start + end) // 2 for start, end in silences]
 
 
-def _smart_split_audio(audio_path, segment_length_min=10, output_dir=None, skip_seconds=0, min_silence_len=1000, silence_thresh=-40):
+def _smart_split_audio(audio_path, segment_length_min=10, output_dir=None, min_silence_len=1000, silence_thresh=-40):
 	"""
 	Split audio file into N-minute segments while avoiding dialogue interruptions
 
@@ -195,7 +206,7 @@ def _smart_split_audio(audio_path, segment_length_min=10, output_dir=None, skip_
 	# Create output directory if it doesn't exist
 	os.makedirs(output_dir, exist_ok=True)
 
-	already_split_file_list = check_audio_already_split(audio_path, output_dir, skip_seconds=skip_seconds)
+	already_split_file_list = check_audio_already_split(audio_path, output_dir)
 	if already_split_file_list:
 		print("Audio already split into segments")
 		return already_split_file_list
@@ -266,8 +277,8 @@ def check_video_and_folder(video_path):
 	return folder_path
 
 
-def split_audio_to_small_pieces(audio_path, output_dir=None, segment_length_min=10, skip_seconds=0):
-	return _smart_split_audio(audio_path, segment_length_min=segment_length_min, output_dir=output_dir, skip_seconds=skip_seconds)
+def split_audio_to_small_pieces(audio_path, output_dir=None, segment_length_min=10):
+	return _smart_split_audio(audio_path, segment_length_min=segment_length_min, output_dir=output_dir)
 
 
 def transcribe_audio_list_with_ai(audio_piece, srt_file_suffix = '.srt') -> List[str]:
@@ -278,14 +289,21 @@ def transcribe_audio_list_with_ai(audio_piece, srt_file_suffix = '.srt') -> List
 		if os.path.exists(srt_file_raw):
 			srt_raw_file_list.append(srt_file_raw)
 			continue
-		promote = kUSER_TRANSCRIBE_PROMPT
-		response = audiohelper.transcribe_audio_with_openrouter(API_KEY, audio_file, promote, system_message=kSYSTEM_TRANSCRIBE_PROMPT)
-
-		raw_content = response.content.strip()
-		with open(srt_file_raw, 'wb') as f:
-			f.write(raw_content)
-			print(f"Raw content saved to: {srt_file_raw}")
-			pass
+		for i in range(kTRY_TRANSCRIBE_AUDIO_WITH_AI_COUNT):
+			if i > 0:
+				print(f"retry transcribe audio: {audio_file}, times: {i}")
+				pass
+			promote = kUSER_TRANSCRIBE_PROMPT
+			response = audiohelper.transcribe_audio_with_openrouter(API_KEY, audio_file, promote, system_message=kSYSTEM_TRANSCRIBE_PROMPT)
+			if not response.ok:
+				print(f"Transcribe audio failed: {audio_file}, error message: {response.text}")
+				continue
+			raw_content = response.content.strip()
+			with open(srt_file_raw, 'wb') as f:
+				f.write(raw_content)
+				print(f"Raw content saved to: {srt_file_raw}")
+				pass
+			break
 
 		srt_raw_file_list.append(srt_file_raw)
 		pass
@@ -527,8 +545,7 @@ def isolate_vocals_from_audio(audio_piece: List[str], tmp_folder: str) -> List[s
 		file_path = os.path.join(tmp_folder, name)
 		if not os.path.exists(file_path):
 			audio = AudioFileClip(audio_file)
-			# audio.write_audiofile(file_path, codec='libopus', bitrate='32K', fps=16000, ffmpeg_params=["-ac", "1"])  # Mono audio
-			audio.write_audiofile(file_path, codec='libopus', bitrate='16K', fps=16000,  ffmpeg_params=["-ac", "1"])  # Mono audio, only for ASR/NLP
+			audio.write_audiofile(file_path, codec=kAUDIO_PARAM_CODEC, bitrate=kAUDIO_PARAM_BITRATE, fps=kAUDIO_PARAM_FPS,  ffmpeg_params=kAUDIO_PARAM_FFMPEG_PARAM)  # Mono audio, only for ASR/NLP
 			if not os.path.exists(file_path):
 				raise FileNotFoundError(f"File '{file_path}' not found.")
 			pass
@@ -546,7 +563,7 @@ def generate_srt_with_ai(video_path, once_done: bool = False, use_demucs: bool =
 	audio_path = os.path.join(tmp_folder, audio_file_name)
 	audio_path = get_audio_from_video(video_path, output_path=audio_path, audio_format=kAUDIO_PARAM_FORMAT, skip_seconds=skip_seconds)
 	print(f"Extracted audio to: {audio_path}")
-	audio_piece = split_audio_to_small_pieces(audio_path, output_dir=tmp_folder, segment_length_min=5, skip_seconds=skip_seconds)
+	audio_piece = split_audio_to_small_pieces(audio_path, output_dir=tmp_folder, segment_length_min=5)
 	print(f"Split audio into pieces: {audio_piece}")
 	if use_demucs:
 		audio_piece = isolate_vocals_from_audio(audio_piece, tmp_folder)
@@ -606,7 +623,41 @@ def parse_timecode(timecode: str) -> SubRipTime:
 	return SubRipTime(hour, minute, second, ms)
 
 
+def deal_with_srt_raw_file_info_in_json_format(text: str, output_file: str) -> bool:
+	index_begin = text.find(kRESPONSE_FORMAT_JSON_BEGIN)
+	index_end = text.rfind(kRESPONSE_FORMAT_JSON_END)
+	if index_begin == -1 and index_end == -1:
+		return False
+	content = text[index_begin + len(kRESPONSE_FORMAT_JSON_BEGIN):index_end]
+	content = content.strip()
+	data = json.loads(content)
+	# 对数据进行排序
+	sorted_data = sorted(data, key=lambda line: line['start_time'])
+	subs = pysrt.SubRipFile()
+	for i, record in enumerate(sorted_data):
+		item = SubRipItem()
+		item.start = SubRipTime(seconds=record['start_time'])
+		item.end = SubRipTime(seconds=record['end_time'])
+		item.index = i + 1
+		item.text = record['text'].strip()
+		subs.append(item)
+
+		pass
+
+	if len(subs) > 0:
+		subs.save(output_file, encoding='utf-8')
+		print(f"SRT file saved to: {output_file}")
+		return True
+
+	return False
+
+
+
 def deal_with_srt_raw_file_info(text: str, output_file: str):
+
+	if kRESPONSE_FORMAT_JSON_BEGIN in text:
+		return deal_with_srt_raw_file_info_in_json_format(text, output_file)
+
 	lines = text.splitlines()
 	
 	subs = pysrt.SubRipFile()

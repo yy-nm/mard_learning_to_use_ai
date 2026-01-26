@@ -1,6 +1,7 @@
 
 import requests
 import base64
+import os
 
 # from together import Together
 
@@ -10,6 +11,25 @@ def encode_audio_to_base64(audio_path):
 		return base64.b64encode(audio_file.read()).decode('utf-8')
 	pass
 
+
+# def audio_file_format(audio_path) -> str:
+# 	file_name, file_extension = os.path.splitext(audio_path)
+# 	file_format = 'wav'
+# 	if file_extension == ".wav":
+# 		file_format = "wav"
+# 	elif file_extension == ".mp3":
+# 		file_format = "mp3"
+# 	elif file_extension == ".aiff":
+# 		file_format = "aiff"
+# 	elif file_extension == ".aac":
+# 		file_format = "aac"
+# 	elif file_extension == ".ogg":
+# 		file_format = "ogg"
+# 	elif file_extension == ".flac":
+# 		file_format = "flac"
+# 	elif file_extension == ".m4a":
+# 		file_format = "m4a"
+# 	return file_format
 
 # openrouter support audio transcribe only 
 # gemini-2.5-flash
@@ -29,6 +49,7 @@ def transcribe_audio_with_openrouter(api_key: str, audio_path: str, promote: str
 	}
 	# Read and encode the audio file
 	base64_audio = encode_audio_to_base64(audio_path)
+	# file_format = audio_file_format(audio_path)
 
 	messages = [
 		{
@@ -59,6 +80,7 @@ def transcribe_audio_with_openrouter(api_key: str, audio_path: str, promote: str
 		"model": model_name,
 		"messages": messages,
 		# "provider": {'sort': 'price',} # prioritize lowest price
+		'response_format': 'verbose_json',
 	}
 
 	response = requests.post(url, headers=headers, json=payload)
